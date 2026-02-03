@@ -29,9 +29,9 @@ const taskForm = document.getElementById('taskForm');
 const taskInput = document.getElementById('taskInput');
 const taskList = document.getElementById('taskList');
 const emptyState = document.getElementById('emptyState');
-const totalTasksEl = document.getElementById('totalTasks');
-const activeTasksEl = document.getElementById('activeTasks');
-const completedTasksEl = document.getElementById('completedTasks');
+const totalTasks = document.getElementById('totalTasks');
+const activeTasks = document.getElementById('activeTasks');
+const completedTasks = document.getElementById('completedTasks');
 const filterButtons = document.querySelectorAll('.filter-button');
 const darkModeToggle = document.getElementById('darkModeToggle');
 
@@ -231,9 +231,9 @@ function updateStats() {
     const completed = tasks.filter(t => t.completed).length;
     const active = total - completed;
     
-    totalTasksEl.textContent = total;
-    activeTasksEl.textContent = active;
-    completedTasksEl.textContent = completed;
+    totalTasks.textContent = total;
+    activeTasks.textContent = active;
+    completedTasks.textContent = completed;
 }
 
 // ======================

@@ -596,6 +596,46 @@ body {
 }
 
 /* ======================
+   Toast Notifications
+   ====================== */
+
+.notification {
+    position: fixed;
+    top: var(--spacing-lg);
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--color-danger);
+    color: white;
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    min-width: 300px;
+    max-width: 500px;
+    opacity: 0;
+    transition: all var(--transition-base);
+    font-weight: 500;
+    text-align: center;
+}
+
+.notification--visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.notification__icon {
+    display: inline-block;
+    margin-right: var(--spacing-xs);
+    font-size: 1.25rem;
+    vertical-align: middle;
+}
+
+.notification__message {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* ======================
    Accessibility & Focus
    ====================== */
 

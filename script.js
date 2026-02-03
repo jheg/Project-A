@@ -298,6 +298,10 @@ function saveTasks() {
         localStorage.setItem('taskIdCounter', taskIdCounter.toString());
     } catch (error) {
         console.error('Failed to save tasks to localStorage:', error);
+        showNotification(
+            'Unable to save tasks. You may be in private browsing mode or storage quota is exceeded.',
+            'error'
+        );
     }
 }
 
@@ -325,6 +329,10 @@ function loadTasks() {
         }
     } catch (error) {
         console.error('Failed to load tasks from localStorage:', error);
+        showNotification(
+            'Unable to load saved tasks. Starting with a fresh task list.',
+            'error'
+        );
         tasks = [];
         taskIdCounter = 0;
     }
@@ -350,6 +358,49 @@ function announceToScreenReader(message) {
     setTimeout(() => {
         document.body.removeChild(announcement);
     }, 1000);
+}
+
+/**
+ * Show a notification to the user
+ */
+function showNotification(message, type = 'error', duration = 5000) {
+    // Remove any existing notification
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.setAttribute('role', 'alert');
+    notification.setAttribute('aria-live', 'assertive');
+    
+    const icon = document.createElement('span');
+    icon.className = 'notification__icon';
+    icon.textContent = '⚠️';
+    icon.setAttribute('aria-hidden', 'true');
+    
+    const messageSpan = document.createElement('span');
+    messageSpan.className = 'notification__message';
+    messageSpan.textContent = message;
+    
+    notification.appendChild(icon);
+    notification.appendChild(messageSpan);
+    document.body.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => {
+        notification.classList.add('notification--visible');
+    }, 10);
+    
+    // Auto-dismiss after duration
+    setTimeout(() => {
+        notification.classList.remove('notification--visible');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, duration);
 }
 
 // ======================
@@ -400,6 +451,10 @@ function saveDarkModePreference() {
         localStorage.setItem('darkMode', isDarkMode.toString());
     } catch (error) {
         console.error('Failed to save dark mode preference:', error);
+        showNotification(
+            'Unable to save dark mode preference. Setting will reset on page reload.',
+            'error'
+        );
     }
 }
 
@@ -415,6 +470,10 @@ function loadDarkModePreference() {
         }
     } catch (error) {
         console.error('Failed to load dark mode preference:', error);
+        showNotification(
+            'Unable to load dark mode preference. Using default light mode.',
+            'error'
+        );
         isDarkMode = false;
     }
 }

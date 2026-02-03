@@ -214,22 +214,6 @@ function createTaskElement(task) {
     return li;
 }
 
-// Add slide out animation to CSS dynamically
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideOut {
-        from {
-            opacity: 1;
-            transform: translateX(0);
-        }
-        to {
-            opacity: 0;
-            transform: translateX(100%);
-        }
-    }
-`;
-document.head.appendChild(style);
-
 /**
  * Update task statistics
  */

@@ -126,7 +126,7 @@ function handleAddTask(e) {
     taskInput.focus();
     
     // Update UI and save
-    renderTasks();
+    addTaskToDOM(task);
     updateStats();
     saveTasks();
     
@@ -142,7 +142,7 @@ function toggleTask(id) {
     
     if (task) {
         task.toggle();
-        renderTasks();
+        updateTaskInDOM(task);
         updateStats();
         saveTasks();
         
@@ -161,7 +161,7 @@ function deleteTask(id) {
         const taskText = tasks[taskIndex].text;
         tasks.splice(taskIndex, 1);
         
-        renderTasks();
+        removeTaskFromDOM(id);
         updateStats();
         saveTasks();
         
@@ -239,6 +239,83 @@ function createTaskElement(task) {
     li.appendChild(deleteBtn);
     
     return li;
+}
+
+/**
+ * Add a task to the DOM (optimized - no full rebuild)
+ */
+function addTaskToDOM(task) {
+    // Check if task should be visible with current filter
+    const filteredTasks = getFilteredTasks();
+    const shouldShow = filteredTasks.some(t => t.id === task.id);
+    
+    if (!shouldShow) {
+        return;
+    }
+    
+    // Hide empty state if visible
+    if (emptyState.classList.contains('empty-state--visible')) {
+        emptyState.classList.remove('empty-state--visible');
+    }
+    
+    const taskElement = createTaskElement(task);
+    taskList.appendChild(taskElement);
+}
+
+/**
+ * Update a task in the DOM (optimized - no full rebuild)
+ */
+function updateTaskInDOM(task) {
+    const taskElement = taskList.querySelector(`[data-task-id="${task.id}"]`);
+    
+    if (!taskElement) {
+        return;
+    }
+    
+    // Check if task should still be visible with current filter
+    const filteredTasks = getFilteredTasks();
+    const shouldShow = filteredTasks.some(t => t.id === task.id);
+    
+    if (!shouldShow) {
+        // Task no longer matches filter, remove it
+        taskElement.remove();
+        // Check if we need to show empty state
+        if (taskList.children.length === 0) {
+            emptyState.classList.add('empty-state--visible');
+            updateEmptyStateMessage();
+        }
+        return;
+    }
+    
+    // Update task element
+    const checkbox = taskElement.querySelector('.task-item__checkbox');
+    const label = taskElement.querySelector('.task-item__text');
+    
+    checkbox.checked = task.completed;
+    checkbox.setAttribute('aria-label', `Mark task "${task.text}" as ${task.completed ? 'incomplete' : 'complete'}`);
+    
+    if (task.completed) {
+        taskElement.classList.add('task-item--completed');
+    } else {
+        taskElement.classList.remove('task-item--completed');
+    }
+}
+
+/**
+ * Remove a task from the DOM (optimized - no full rebuild)
+ */
+function removeTaskFromDOM(id) {
+    const taskElement = taskList.querySelector(`[data-task-id="${id}"]`);
+    
+    if (taskElement) {
+        taskElement.remove();
+    }
+    
+    // Show empty state if no tasks remain
+    if (taskList.children.length === 0) {
+        emptyState.classList.add('empty-state--visible');
+        updateEmptyStateMessage();
+    }
 }
 
 /**

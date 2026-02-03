@@ -13,6 +13,12 @@ let currentFilter = 'all'; // 'all', 'active', or 'completed'
 let isDarkMode = false;
 
 // ======================
+// Constants
+// ======================
+
+const ANIMATION_DURATION = 300; // milliseconds - matches CSS animation duration
+
+// ======================
 // DOM Elements
 // ======================
 
@@ -202,8 +208,8 @@ function createTaskElement(task) {
     deleteBtn.setAttribute('aria-label', `Delete task "${task.text}"`);
     deleteBtn.addEventListener('click', () => {
         // Add animation before deleting
-        li.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => deleteTask(task.id), 300);
+        li.style.animation = `slideOut ${ANIMATION_DURATION}ms ease-out`;
+        setTimeout(() => deleteTask(task.id), ANIMATION_DURATION);
     });
     
     // Assemble the task item

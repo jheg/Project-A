@@ -35,16 +35,18 @@
 
 ---
 
-### ⏳ 3. Create constants for magic numbers
-- **Status:** NOT STARTED
+### ✅ 3. Create constants for magic numbers
+- **Status:** COMPLETED (3 Feb 2026)
 - **Priority:** Medium
-- **Location:** `script.js` line 210
-- **Description:** The `300ms` timeout is hardcoded and should match CSS animation duration
-- **Suggested Implementation:**
-  ```javascript
-  const ANIMATION_DURATION = 300; // milliseconds
-  ```
-- **Usage:** Replace `setTimeout(() => deleteTask(task.id), 300)` with `setTimeout(() => deleteTask(task.id), ANIMATION_DURATION)`
+- **Files Modified:**
+  - `script.js` - Added Constants section with `ANIMATION_DURATION` constant
+  - `script.js` - Updated delete button animation and setTimeout to use constant
+- **Implementation:**
+  - Created new "Constants" section in script.js after State Management
+  - Defined `ANIMATION_DURATION = 300` with descriptive comment
+  - Updated both animation style and setTimeout to use the constant
+  - Now synchronized with CSS animation duration
+- **Notes:** Both the inline animation style and setTimeout now reference the same constant, ensuring they stay in sync if the duration ever needs to change
 
 ---
 
@@ -157,9 +159,9 @@
 ## Progress Summary
 
 - **Total Items:** 11
-- **Completed:** 2 ✅
+- **Completed:** 3 ✅
 - **In Progress:** 0 ⏳
-- **Not Started:** 8 ⏳
+- **Not Started:** 7 ⏳
 - **Discussion Needed:** 1 🤔
 
 ---

@@ -11,7 +11,6 @@
 // ======================
 
 let tasks = [];
-let taskIdCounter = 0;
 let currentFilter = 'all'; // 'all', 'active', or 'completed'
 let isDarkMode = false;
 let deletedTask = null; // Store deleted task for undo functionality
@@ -26,6 +25,17 @@ const ANIMATION_DURATION = 300; // milliseconds - matches CSS animation duration
 // ======================
 // Utility Functions
 // ======================
+
+/**
+ * Generate a unique task ID using timestamp and random component
+ * Format: timestamp_randomString (e.g., 1738560000000_a7b3f9)
+ * This ensures uniqueness across sessions and browsers
+ */
+function generateTaskId() {
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    return `${timestamp}_${randomStr}`;
+}
 
 /**
  * Sanitize user input to prevent XSS attacks
@@ -58,7 +68,7 @@ const darkModeToggle = document.getElementById('darkModeToggle');
 
 class Task {
     constructor(text, id = null) {
-        this.id = id || ++taskIdCounter;
+        this.id = id || generateTaskId();
         this.text = text;
         this.completed = false;
         this.createdAt = new Date().toISOString();
@@ -450,7 +460,6 @@ function updateEmptyStateMessage() {
 function saveTasks() {
     try {
         localStorage.setItem('tasks', JSON.stringify(tasks));
-        localStorage.setItem('taskIdCounter', taskIdCounter.toString());
     } catch (error) {
         console.error('Failed to save tasks to localStorage:', error);
         showNotification(
@@ -466,7 +475,6 @@ function saveTasks() {
 function loadTasks() {
     try {
         const savedTasks = localStorage.getItem('tasks');
-        const savedCounter = localStorage.getItem('taskIdCounter');
         
         if (savedTasks) {
             const parsedTasks = JSON.parse(savedTasks);
@@ -479,8 +487,9 @@ function loadTasks() {
             });
         }
         
-        if (savedCounter) {
-            taskIdCounter = parseInt(savedCounter, 10);
+        // Clean up old taskIdCounter from localStorage (legacy)
+        if (localStorage.getItem('taskIdCounter')) {
+            localStorage.removeItem('taskIdCounter');
         }
     } catch (error) {
         console.error('Failed to load tasks from localStorage:', error);
@@ -489,7 +498,6 @@ function loadTasks() {
             'error'
         );
         tasks = [];
-        taskIdCounter = 0;
     }
 }
 

@@ -34,7 +34,6 @@
                     id="taskInput" 
                     class="task-form__input"
                     placeholder="Enter a new task..."
-                    aria-label="Task description"
                     required
                     maxlength="200"
                 />
@@ -72,6 +71,7 @@
                     class="filter-button filter-button--active" 
                     data-filter="all"
                     aria-label="Show all tasks"
+                    aria-pressed="true"
                 >
                     All
                 </button>
@@ -79,6 +79,7 @@
                     class="filter-button" 
                     data-filter="active"
                     aria-label="Show active tasks"
+                    aria-pressed="false"
                 >
                     Active
                 </button>
@@ -86,6 +87,7 @@
                     class="filter-button" 
                     data-filter="completed"
                     aria-label="Show completed tasks"
+                    aria-pressed="false"
                 >
                     Completed
                 </button>

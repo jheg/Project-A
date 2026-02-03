@@ -50,23 +50,28 @@
 
 ---
 
-### ⏳ 4. Add initial `aria-pressed` states to filter buttons
-- **Status:** NOT STARTED
+### ✅ 4. Add initial `aria-pressed` states to filter buttons
+- **Status:** COMPLETED (3 Feb 2026)
 - **Priority:** High (Accessibility)
-- **Location:** `index.html` lines 72-91
-- **Description:** Filter buttons missing initial `aria-pressed` attributes for screen readers
-- **Suggested Implementation:**
-  - Add `aria-pressed="true"` to "All" button (initially active)
-  - Add `aria-pressed="false"` to "Active" and "Completed" buttons
+- **Files Modified:**
+  - `index.html` - Added `aria-pressed` attributes to all three filter buttons
+- **Implementation:**
+  - Added `aria-pressed="true"` to "All" button (initially active)
+  - Added `aria-pressed="false"` to "Active" and "Completed" buttons
+  - Screen readers can now properly announce button state on page load
+- **Notes:** JavaScript already updates aria-pressed dynamically when filters change (setFilter function), now the initial state is also properly defined
 
 ---
 
-### ⏳ 5. Remove redundant `aria-label` on task input
-- **Status:** NOT STARTED
+### ✅ 5. Remove redundant `aria-label` on task input
+- **Status:** COMPLETED (3 Feb 2026)
 - **Priority:** Medium (Accessibility)
-- **Location:** `index.html` line 37
-- **Description:** Input has both a `<label>` element AND `aria-label` attribute. The `aria-label` overrides the label, causing redundancy
-- **Suggested Implementation:** Remove `aria-label="Task description"` attribute from the input element
+- **Files Modified:**
+  - `index.html` - Removed `aria-label` attribute from task input element
+- **Implementation:**
+  - Removed `aria-label="Task description"` from the input element (line 37)
+  - The associated `<label>` element is now the sole label provider
+- **Notes:** The `aria-label` was overriding the properly associated `<label>` element. Now screen readers will use the label element as intended, eliminating redundancy and potential confusion
 
 ---
 
@@ -159,9 +164,9 @@
 ## Progress Summary
 
 - **Total Items:** 11
-- **Completed:** 3 ✅
+- **Completed:** 5 ✅
 - **In Progress:** 0 ⏳
-- **Not Started:** 7 ⏳
+- **Not Started:** 5 ⏳
 - **Discussion Needed:** 1 🤔
 
 ---

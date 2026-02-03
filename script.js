@@ -22,6 +22,21 @@ let isDarkMode = false;
 const ANIMATION_DURATION = 300; // milliseconds - matches CSS animation duration
 
 // ======================
+// Utility Functions
+// ======================
+
+/**
+ * Sanitize user input to prevent XSS attacks
+ * Removes HTML tags and encodes special characters
+ */
+function sanitizeInput(input) {
+    // Create a temporary element to leverage browser's built-in text encoding
+    const temp = document.createElement('div');
+    temp.textContent = input;
+    return temp.innerHTML;
+}
+
+// ======================
 // DOM Elements
 // ======================
 
@@ -100,7 +115,10 @@ function handleAddTask(e) {
         return;
     }
     
-    const task = new Task(text);
+    // Sanitize input to prevent XSS attacks
+    const sanitizedText = sanitizeInput(text);
+    
+    const task = new Task(sanitizedText);
     tasks.push(task);
     
     // Clear input and refocus
@@ -113,7 +131,7 @@ function handleAddTask(e) {
     saveTasks();
     
     // Announce to screen readers
-    announceToScreenReader(`Task "${text}" added`);
+    announceToScreenReader(`Task "${sanitizedText}" added`);
 }
 
 /**

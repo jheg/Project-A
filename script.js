@@ -3,6 +3,9 @@
  * A simple, accessible task management application with localStorage persistence
  */
 
+(function() {
+    'use strict';
+
 // ======================
 // State Management
 // ======================
@@ -494,3 +497,5 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+
+})(); // End of IIFE

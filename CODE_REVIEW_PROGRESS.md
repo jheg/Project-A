@@ -77,16 +77,22 @@
 
 ## Recommended Improvements
 
-### ⏳ 6. Wrap code in IIFE or use modules
-- **Status:** NOT STARTED
+### ✅ 6. Wrap code in IIFE or use modules
+- **Status:** COMPLETED (3 Feb 2026)
 - **Priority:** Medium
-- **Location:** `script.js` (entire file)
-- **Description:** Global variables (`tasks`, `taskIdCounter`, `currentFilter`, `isDarkMode`) pollute global scope
+- **Files Modified:**
+  - `script.js` - Wrapped entire application in IIFE with 'use strict' directive
+- **Implementation:**
+  - Added IIFE opening: `(function() { 'use strict';` at the start of the file
+  - Added IIFE closing: `})();` at the end of the file
+  - All variables and functions are now encapsulated within the IIFE scope
+  - Added 'use strict' directive for better error catching and modern JavaScript practices
 - **Benefits:**
-  - Prevents naming collisions
-  - Improves testability
-  - Follows modern JavaScript patterns
-- **Suggested Implementation:** Wrap entire application in IIFE or convert to ES6 modules
+  - Prevents global scope pollution - no naming collisions with other scripts
+  - Improves code maintainability and testability
+  - Follows modern JavaScript encapsulation patterns
+  - Variables like `tasks`, `taskIdCounter`, `currentFilter`, `isDarkMode` are now private
+- **Notes:** The application functionality remains unchanged, but the code is now properly encapsulated and protected from external interference
 
 ---
 
@@ -164,9 +170,9 @@
 ## Progress Summary
 
 - **Total Items:** 11
-- **Completed:** 5 ✅
+- **Completed:** 6 ✅
 - **In Progress:** 0 ⏳
-- **Not Started:** 5 ⏳
+- **Not Started:** 4 ⏳
 - **Discussion Needed:** 1 🤔
 
 ---

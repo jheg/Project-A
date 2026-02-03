@@ -181,28 +181,47 @@
 
 ## Design Clarifications Needed
 
-### 🤔 11. No confirmation for delete actions
-- **Status:** DISCUSSION NEEDED
-- **Location:** `script.js` lines 133-146
-- **Question:** Is immediate deletion (with only animation) intentional?
-- **Considerations:**
-  - Users can accidentally delete tasks
-  - No undo functionality
-  - Best practice: confirm destructive actions
-- **Options:**
-  - Add delete confirmation dialog
-  - Implement undo functionality (temporary "trash" state)
-  - Keep current behavior (fast workflow)
+### ✅ 11. Undo functionality for delete actions (RESOLVED)
+- **Status:** COMPLETED (3 Feb 2026)
+- **Decision:** Implemented Option 2 - Undo functionality (modern UX pattern)
+- **Priority:** Medium (UX)
+- **Files Modified:**
+  - `script.js` - Enhanced delete system with undo capability
+  - `styles.css` - Added notification action button and info variant styles
+- **Implementation:**
+  - Added state variables: `deletedTask` and `undoTimeout` for tracking
+  - Created `undoDelete()` function to restore deleted tasks
+  - Enhanced `deleteTask()` to:
+    - Store deleted task with its original index
+    - Show info notification with "Undo" button
+    - Set 5-second timeout before permanent deletion
+  - Enhanced `showNotification()` to support action callbacks
+  - Added info notification variant (blue) for non-error messages
+  - Added `.notification__action` button styles with hover/focus states
+  - Restores task to exact original position in list
+- **User Experience:**
+  - ✅ Non-intrusive workflow (no confirmation dialog)
+  - ✅ 5-second window to undo accidental deletions
+  - ✅ Blue notification with prominent "Undo" button
+  - ✅ Task restored to original position when undone
+  - ✅ Smooth animations throughout
+  - ✅ Accessible with keyboard and screen readers
+- **Benefits:**
+  - Follows modern UX patterns (Gmail, Google Keep style)
+  - Maintains fast workflow without interruptions
+  - Provides safety net for accidental deletions
+  - Better than confirmation dialogs for user experience
+- **Notes:** This implementation provides the best balance between speed and safety. Users can delete quickly but still recover from mistakes within 5 seconds
 
 ---
 
 ## Progress Summary
 
 - **Total Items:** 11
-- **Completed:** 9 ✅
+- **Completed:** 10 ✅
 - **In Progress:** 0 ⏳
 - **Not Started:** 1 ⏳
-- **Discussion Needed:** 1 🤔
+- **Discussion Needed:** 0 🤔
 
 ---
 

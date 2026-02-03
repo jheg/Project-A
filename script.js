@@ -14,6 +14,8 @@ let tasks = [];
 let taskIdCounter = 0;
 let currentFilter = 'all'; // 'all', 'active', or 'completed'
 let isDarkMode = false;
+let deletedTask = null; // Store deleted task for undo functionality
+let undoTimeout = null; // Track undo timeout
 
 // ======================
 // Constants
@@ -159,14 +161,63 @@ function deleteTask(id) {
     
     if (taskIndex !== -1) {
         const taskText = tasks[taskIndex].text;
+        
+        // Store deleted task for undo
+        deletedTask = {
+            task: tasks[taskIndex],
+            index: taskIndex
+        };
+        
         tasks.splice(taskIndex, 1);
         
         removeTaskFromDOM(id);
         updateStats();
         saveTasks();
         
+        // Show undo notification
+        showNotification(
+            `Task "${taskText}" deleted`,
+            'info',
+            5000,
+            () => undoDelete()
+        );
+        
         announceToScreenReader(`Task "${taskText}" deleted`);
+        
+        // Clear deleted task after undo window expires
+        if (undoTimeout) {
+            clearTimeout(undoTimeout);
+        }
+        undoTimeout = setTimeout(() => {
+            deletedTask = null;
+        }, 5000);
     }
+}
+
+/**
+ * Restore a deleted task (undo)
+ */
+function undoDelete() {
+    if (!deletedTask) {
+        return;
+    }
+    
+    if (undoTimeout) {
+        clearTimeout(undoTimeout);
+    }
+    
+    // Restore task to its original position
+    tasks.splice(deletedTask.index, 0, deletedTask.task);
+    
+    // Re-render the list to restore task
+    renderTasks();
+    updateStats();
+    saveTasks();
+    
+    announceToScreenReader(`Task "${deletedTask.task.text}" restored`);
+    
+    deletedTask = null;
+    undoTimeout = null;
 }
 
 // ======================
@@ -467,7 +518,7 @@ function announceToScreenReader(message) {
 /**
  * Show a notification to the user
  */
-function showNotification(message, type = 'error', duration = 5000) {
+function showNotification(message, type = 'error', duration = 5000, actionCallback = null) {
     // Remove any existing notification
     const existingNotification = document.querySelector('.notification');
     if (existingNotification) {
@@ -476,13 +527,13 @@ function showNotification(message, type = 'error', duration = 5000) {
     
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = 'notification';
+    notification.className = `notification notification--${type}`;
     notification.setAttribute('role', 'alert');
     notification.setAttribute('aria-live', 'assertive');
     
     const icon = document.createElement('span');
     icon.className = 'notification__icon';
-    icon.textContent = '⚠️';
+    icon.textContent = type === 'info' ? 'ℹ️' : '⚠️';
     icon.setAttribute('aria-hidden', 'true');
     
     const messageSpan = document.createElement('span');
@@ -491,6 +542,23 @@ function showNotification(message, type = 'error', duration = 5000) {
     
     notification.appendChild(icon);
     notification.appendChild(messageSpan);
+    
+    // Add action button if callback provided
+    if (actionCallback) {
+        const actionButton = document.createElement('button');
+        actionButton.className = 'notification__action';
+        actionButton.textContent = 'Undo';
+        actionButton.setAttribute('aria-label', 'Undo deletion');
+        actionButton.addEventListener('click', () => {
+            actionCallback();
+            notification.classList.remove('notification--visible');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        });
+        notification.appendChild(actionButton);
+    }
+    
     document.body.appendChild(notification);
     
     // Trigger animation

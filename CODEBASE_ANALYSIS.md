@@ -1,3 +1,9 @@
+---
+name: Codebase Analysis
+description: Comprehensive codebase analysis and architectural guidelines for the Task Manager application
+applyTo: "**"
+---
+
 # Comprehensive Codebase Analysis
 ## Task Manager Application - Multi-Perspective Documentation
 

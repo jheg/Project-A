@@ -67,15 +67,38 @@ const darkModeToggle = document.getElementById('darkModeToggle');
 // ======================
 
 class Task {
-    constructor(text, id = null) {
+    constructor(text, id = null, dueDate = null) {
         this.id = id || generateTaskId();
         this.text = text;
         this.completed = false;
         this.createdAt = new Date().toISOString();
+        this.dueDate = dueDate; // Format: YYYY-MM-DD
+        this.dateCompleted = null; // Auto-set on completion
     }
 
     toggle() {
         this.completed = !this.completed;
+        if (this.completed) {
+            this.dateCompleted = new Date().toISOString();
+        } else {
+            this.dateCompleted = null;
+        }
+    }
+    
+    setDueDate(date) {
+        this.dueDate = date;
+    }
+    
+    isOverdue() {
+        if (!this.dueDate || this.completed) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return this.dueDate < today;
+    }
+    
+    isDueToday() {
+        if (!this.dueDate) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return this.dueDate === today;
     }
 }
 
@@ -89,6 +112,7 @@ function init() {
     renderTasks();
     updateStats();
     attachEventListeners();
+    initDatesFeature();
 }
 
 // ======================
@@ -655,6 +679,633 @@ function loadDarkModePreference() {
             'error'
         );
         isDarkMode = false;
+    }
+}
+
+// ======================
+// Important Dates Feature
+// ======================
+
+let currentView = 'main'; // 'main' or 'dates'
+let datesViewMode = 'calendar'; // 'calendar' or 'list'
+let currentMonth = new Date();
+let currentDateFilter = 'all';
+let selectedTaskForDate = null;
+
+// Mock static data for MVP
+const staticTasks = [
+    { id: '1', text: 'Review project proposals', completed: false, dueDate: '2026-02-04', createdAt: '2026-02-01T10:00:00Z' },
+    { id: '2', text: 'Submit quarterly report', completed: false, dueDate: '2026-02-05', createdAt: '2026-02-01T11:00:00Z' },
+    { id: '3', text: 'Team meeting preparation', completed: true, dueDate: '2026-02-03', createdAt: '2026-02-01T12:00:00Z' },
+    { id: '4', text: 'Update documentation', completed: false, dueDate: '2026-02-10', createdAt: '2026-02-01T13:00:00Z' },
+    { id: '5', text: 'Code review for feature X', completed: false, dueDate: '2026-02-08', createdAt: '2026-02-01T14:00:00Z' },
+    { id: '6', text: 'Fix critical bug', completed: false, dueDate: '2026-02-02', createdAt: '2026-02-01T15:00:00Z' },
+    { id: '7', text: 'Prepare presentation', completed: false, dueDate: '2026-02-15', createdAt: '2026-02-01T16:00:00Z' },
+    { id: '8', text: 'Client follow-up call', completed: false, dueDate: '2026-02-06', createdAt: '2026-02-01T17:00:00Z' },
+    { id: '9', text: 'Update dependencies', completed: true, dueDate: '2026-02-01', createdAt: '2026-01-30T10:00:00Z' },
+    { id: '10', text: 'Design mockups review', completed: false, dueDate: '2026-02-12', createdAt: '2026-02-01T18:00:00Z' }
+];
+
+/**
+ * Initialize dates feature
+ */
+function initDatesFeature() {
+    setupRouting();
+    attachDatesEventListeners();
+}
+
+/**
+ * Setup SPA routing
+ */
+function setupRouting() {
+    function handleRoute() {
+        const hash = window.location.hash || '#/';
+        
+        if (hash === '#/' || hash === '') {
+            showMainView();
+        } else if (hash.startsWith('#/dates')) {
+            showDatesView();
+        }
+        
+        updateNavigation();
+    }
+    
+    window.addEventListener('hashchange', handleRoute);
+    handleRoute();
+}
+
+/**
+ * Update navigation active states
+ */
+function updateNavigation() {
+    const navTasks = document.getElementById('navTasks');
+    const navDates = document.getElementById('navDates');
+    const hash = window.location.hash || '#/';
+    
+    if (hash.startsWith('#/dates')) {
+        navTasks.classList.remove('active');
+        navDates.classList.add('active');
+    } else {
+        navTasks.classList.add('active');
+        navDates.classList.remove('active');
+    }
+}
+
+/**
+ * Show main tasks view
+ */
+function showMainView() {
+    currentView = 'main';
+    document.getElementById('mainView').style.display = 'block';
+    document.getElementById('datesView').style.display = 'none';
+    document.querySelector('.task-input').style.display = 'block';
+    document.querySelector('.task-stats').style.display = 'block';
+    document.querySelector('.task-filters').style.display = 'block';
+}
+
+/**
+ * Show dates view
+ */
+function showDatesView() {
+    currentView = 'dates';
+    document.getElementById('mainView').style.display = 'none';
+    document.getElementById('datesView').style.display = 'block';
+    document.querySelector('.task-input').style.display = 'none';
+    document.querySelector('.task-stats').style.display = 'none';
+    document.querySelector('.task-filters').style.display = 'none';
+    
+    renderDatesView();
+    updateOverdueBadge();
+}
+
+/**
+ * Attach event listeners for dates feature
+ */
+function attachDatesEventListeners() {
+    // View tabs
+    document.getElementById('calendarTab').addEventListener('click', () => switchDatesView('calendar'));
+    document.getElementById('listTab').addEventListener('click', () => switchDatesView('list'));
+    
+    // Calendar navigation
+    document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
+    document.getElementById('todayBtn').addEventListener('click', goToToday);
+    
+    // Date filter
+    document.getElementById('dateFilter').addEventListener('change', handleDateFilter);
+    
+    // Date picker modal
+    document.getElementById('closeDatePicker').addEventListener('click', closeDatePickerModal);
+    document.getElementById('setDate').addEventListener('click', setTaskDate);
+    document.getElementById('clearDate').addEventListener('click', clearTaskDate);
+    
+    // Close modal on background click
+    document.getElementById('datePickerModal').addEventListener('click', (e) => {
+        if (e.target.id === 'datePickerModal') {
+            closeDatePickerModal();
+        }
+    });
+    
+    // Escape key to close modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.getElementById('datePickerModal').style.display === 'flex') {
+            closeDatePickerModal();
+        }
+    });
+}
+
+/**
+ * Switch between calendar and list views
+ */
+function switchDatesView(mode) {
+    datesViewMode = mode;
+    
+    // Update tabs
+    document.getElementById('calendarTab').classList.toggle('view-tab--active', mode === 'calendar');
+    document.getElementById('listTab').classList.toggle('view-tab--active', mode === 'list');
+    document.getElementById('calendarTab').setAttribute('aria-selected', mode === 'calendar');
+    document.getElementById('listTab').setAttribute('aria-selected', mode === 'list');
+    
+    // Show/hide views
+    document.getElementById('calendarView').style.display = mode === 'calendar' ? 'block' : 'none';
+    document.getElementById('listViewContainer').style.display = mode === 'list' ? 'block' : 'none';
+    
+    renderDatesView();
+}
+
+/**
+ * Render dates view based on current mode
+ */
+function renderDatesView() {
+    if (datesViewMode === 'calendar') {
+        renderCalendar();
+    } else {
+        renderListView();
+    }
+}
+
+/**
+ * Change calendar month
+ */
+function changeMonth(delta) {
+    currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + delta, 1);
+    renderCalendar();
+}
+
+/**
+ * Go to today's date
+ */
+function goToToday() {
+    currentMonth = new Date();
+    renderCalendar();
+    announceToScreenReader('Jumped to current month');
+}
+
+/**
+ * Render calendar view
+ */
+function renderCalendar() {
+    const monthTitle = document.getElementById('currentMonth');
+    monthTitle.textContent = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
+    
+    // Day headers
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayNames.forEach(day => {
+        const header = document.createElement('div');
+        header.className = 'calendar-day-header';
+        header.textContent = day;
+        grid.appendChild(header);
+    });
+    
+    // Get month info
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Previous month's trailing days
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const day = daysInPrevMonth - i;
+        const cell = createCalendarDay(day, true, year, month - 1);
+        grid.appendChild(cell);
+    }
+    
+    // Current month's days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const cell = createCalendarDay(day, false, year, month, dateStr === today);
+        grid.appendChild(cell);
+    }
+    
+    // Next month's leading days
+    const totalCells = firstDay + daysInMonth;
+    const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+    for (let day = 1; day <= remainingCells; day++) {
+        const cell = createCalendarDay(day, true, year, month + 1);
+        grid.appendChild(cell);
+    }
+    
+    checkEmptyState();
+}
+
+/**
+ * Create a calendar day cell
+ */
+function createCalendarDay(day, isOtherMonth, year, month, isToday = false) {
+    const cell = document.createElement('div');
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    cell.className = 'calendar-day';
+    if (isOtherMonth) {
+        cell.classList.add('calendar-day--other-month');
+    }
+    if (isToday) {
+        cell.classList.add('calendar-day--today');
+    }
+    
+    const dateNumber = document.createElement('div');
+    dateNumber.className = 'calendar-date-number';
+    dateNumber.textContent = day;
+    cell.appendChild(dateNumber);
+    
+    if (!isOtherMonth) {
+        const tasksForDate = getTasksForDate(dateStr);
+        const visibleTasks = tasksForDate.slice(0, 3);
+        
+        if (tasksForDate.length > 0) {
+            cell.classList.add('calendar-day--has-tasks');
+            const tasksContainer = document.createElement('div');
+            tasksContainer.className = 'calendar-tasks';
+            
+            visibleTasks.forEach(task => {
+                const taskEl = document.createElement('div');
+                taskEl.className = 'calendar-task';
+                
+                if (task.completed) {
+                    taskEl.classList.add('calendar-task--completed');
+                } else if (isTaskOverdue(task)) {
+                    taskEl.classList.add('calendar-task--overdue');
+                } else if (isTaskDueToday(task)) {
+                    taskEl.classList.add('calendar-task--today');
+                } else {
+                    taskEl.classList.add('calendar-task--future');
+                }
+                
+                taskEl.textContent = task.text;
+                taskEl.title = task.text;
+                tasksContainer.appendChild(taskEl);
+            });
+            
+            if (tasksForDate.length > 3) {
+                const more = document.createElement('div');
+                more.className = 'calendar-more-tasks';
+                more.textContent = `+${tasksForDate.length - 3} more`;
+                tasksContainer.appendChild(more);
+            }
+            
+            cell.appendChild(tasksContainer);
+        }
+    }
+    
+    return cell;
+}
+
+/**
+ * Render list view
+ */
+function renderListView() {
+    const container = document.getElementById('listViewContent');
+    container.innerHTML = '';
+    
+    const tasksWithDates = getFilteredDateTasks();
+    
+    if (tasksWithDates.length === 0) {
+        checkEmptyState();
+        return;
+    }
+    
+    // Group tasks
+    const groups = {
+        overdue: [],
+        today: [],
+        tomorrow: [],
+        thisWeek: [],
+        later: []
+    };
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    
+    const weekEnd = new Date(today);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    
+    tasksWithDates.forEach(task => {
+        if (!task.completed && isTaskOverdue(task)) {
+            groups.overdue.push(task);
+        } else if (task.dueDate === todayStr) {
+            groups.today.push(task);
+        } else if (task.dueDate === tomorrowStr) {
+            groups.tomorrow.push(task);
+        } else if (new Date(task.dueDate) <= weekEnd) {
+            groups.thisWeek.push(task);
+        } else {
+            groups.later.push(task);
+        }
+    });
+    
+    // Render each group
+    if (groups.overdue.length > 0) {
+        container.appendChild(createListSection('⚠️ Overdue', groups.overdue, true));
+    }
+    if (groups.today.length > 0) {
+        container.appendChild(createListSection('📅 Today', groups.today));
+    }
+    if (groups.tomorrow.length > 0) {
+        container.appendChild(createListSection('📅 Tomorrow', groups.tomorrow));
+    }
+    if (groups.thisWeek.length > 0) {
+        container.appendChild(createListSection('📅 This Week', groups.thisWeek));
+    }
+    if (groups.later.length > 0) {
+        container.appendChild(createListSection('📅 Later', groups.later));
+    }
+    
+    checkEmptyState();
+}
+
+/**
+ * Create a list section
+ */
+function createListSection(title, tasks, isOverdue = false) {
+    const section = document.createElement('div');
+    section.className = 'list-section';
+    
+    const header = document.createElement('div');
+    header.className = `list-section-header ${isOverdue ? 'list-section-header--overdue' : ''}`;
+    header.innerHTML = `
+        ${title}
+        <span class="list-section-count">(${tasks.length})</span>
+    `;
+    section.appendChild(header);
+    
+    tasks.forEach(task => {
+        const item = document.createElement('div');
+        item.className = 'list-task-item';
+        if (isOverdue) {
+            item.classList.add('list-task-item--overdue');
+        } else if (isTaskDueToday(task)) {
+            item.classList.add('list-task-item--today');
+        }
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'list-task-checkbox';
+        checkbox.checked = task.completed;
+        checkbox.addEventListener('change', () => toggleStaticTask(task.id));
+        
+        const content = document.createElement('div');
+        content.className = 'list-task-content';
+        
+        const text = document.createElement('div');
+        text.className = `list-task-text ${task.completed ? 'list-task-text--completed' : ''}`;
+        text.textContent = task.text;
+        
+        const date = document.createElement('div');
+        date.className = `list-task-date ${isOverdue ? 'list-task-date--overdue' : ''}`;
+        date.textContent = `Due: ${formatDate(task.dueDate)}`;
+        
+        content.appendChild(text);
+        content.appendChild(date);
+        
+        item.appendChild(checkbox);
+        item.appendChild(content);
+        
+        section.appendChild(item);
+    });
+    
+    return section;
+}
+
+/**
+ * Get tasks for a specific date
+ */
+function getTasksForDate(dateStr) {
+    return staticTasks.filter(task => task.dueDate === dateStr);
+}
+
+/**
+ * Get all tasks with dates (filtered)
+ */
+function getFilteredDateTasks() {
+    let filtered = staticTasks.filter(task => task.dueDate);
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    switch (currentDateFilter) {
+        case 'today':
+            filtered = filtered.filter(task => task.dueDate === today);
+            break;
+        case 'week':
+            const weekEnd = new Date();
+            weekEnd.setDate(weekEnd.getDate() + 7);
+            const weekEndStr = weekEnd.toISOString().split('T')[0];
+            filtered = filtered.filter(task => task.dueDate >= today && task.dueDate <= weekEndStr);
+            break;
+        case 'month':
+            const monthEnd = new Date();
+            monthEnd.setMonth(monthEnd.getMonth() + 1);
+            const monthEndStr = monthEnd.toISOString().split('T')[0];
+            filtered = filtered.filter(task => task.dueDate >= today && task.dueDate <= monthEndStr);
+            break;
+        case 'overdue':
+            filtered = filtered.filter(task => !task.completed && task.dueDate < today);
+            break;
+    }
+    
+    return filtered.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+}
+
+/**
+ * Check if task is overdue
+ */
+function isTaskOverdue(task) {
+    if (!task.dueDate || task.completed) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return task.dueDate < today;
+}
+
+/**
+ * Check if task is due today
+ */
+function isTaskDueToday(task) {
+    if (!task.dueDate) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return task.dueDate === today;
+}
+
+/**
+ * Handle date filter change
+ */
+function handleDateFilter(e) {
+    currentDateFilter = e.target.value;
+    renderDatesView();
+    announceToScreenReader(`Filter changed to ${currentDateFilter}`);
+}
+
+/**
+ * Update overdue badge
+ */
+function updateOverdueBadge() {
+    const overdueCount = staticTasks.filter(task => isTaskOverdue(task)).length;
+    const badge = document.getElementById('overdueBadge');
+    const countEl = badge.querySelector('.overdue-badge__count');
+    
+    if (overdueCount > 0) {
+        badge.style.display = 'flex';
+        countEl.textContent = overdueCount;
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+/**
+ * Check and show/hide empty state
+ */
+function checkEmptyState() {
+    const tasksWithDates = getFilteredDateTasks();
+    const emptyState = document.getElementById('datesEmptyState');
+    const calendarView = document.getElementById('calendarView');
+    const listView = document.getElementById('listViewContainer');
+    
+    if (tasksWithDates.length === 0) {
+        emptyState.style.display = 'block';
+        if (datesViewMode === 'calendar') {
+            calendarView.style.display = 'none';
+        } else {
+            listView.style.display = 'none';
+        }
+    } else {
+        emptyState.style.display = 'none';
+        if (datesViewMode === 'calendar') {
+            calendarView.style.display = 'block';
+        } else {
+            listView.style.display = 'block';
+        }
+    }
+}
+
+/**
+ * Format date for display
+ */
+function formatDate(dateStr) {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+    });
+}
+
+/**
+ * Toggle static task (MVP - just updates display)
+ */
+function toggleStaticTask(taskId) {
+    const task = staticTasks.find(t => t.id === taskId);
+    if (task) {
+        task.completed = !task.completed;
+        renderDatesView();
+        updateOverdueBadge();
+        announceToScreenReader(`Task marked as ${task.completed ? 'completed' : 'incomplete'}`);
+    }
+}
+
+/**
+ * Open date picker modal
+ */
+function openDatePickerModal(taskId) {
+    selectedTaskForDate = taskId;
+    const modal = document.getElementById('datePickerModal');
+    const input = document.getElementById('dueDateInput');
+    
+    // Set min date to today
+    const today = new Date().toISOString().split('T')[0];
+    input.min = today;
+    
+    // If task has a date, pre-fill it
+    const task = staticTasks.find(t => t.id === taskId);
+    if (task && task.dueDate) {
+        input.value = task.dueDate;
+    } else {
+        input.value = '';
+    }
+    
+    modal.style.display = 'flex';
+    input.focus();
+}
+
+/**
+ * Close date picker modal
+ */
+function closeDatePickerModal() {
+    document.getElementById('datePickerModal').style.display = 'none';
+    selectedTaskForDate = null;
+}
+
+/**
+ * Set task date
+ */
+function setTaskDate() {
+    const input = document.getElementById('dueDateInput');
+    const date = input.value;
+    
+    if (!date || !selectedTaskForDate) {
+        return;
+    }
+    
+    const task = staticTasks.find(t => t.id === selectedTaskForDate);
+    if (task) {
+        task.dueDate = date;
+        closeDatePickerModal();
+        
+        if (currentView === 'dates') {
+            renderDatesView();
+            updateOverdueBadge();
+        }
+        
+        announceToScreenReader(`Due date set to ${formatDate(date)}`);
+    }
+}
+
+/**
+ * Clear task date
+ */
+function clearTaskDate() {
+    if (!selectedTaskForDate) {
+        return;
+    }
+    
+    const task = staticTasks.find(t => t.id === selectedTaskForDate);
+    if (task) {
+        task.dueDate = null;
+        closeDatePickerModal();
+        
+        if (currentView === 'dates') {
+            renderDatesView();
+            updateOverdueBadge();
+        }
+        
+        announceToScreenReader('Due date cleared');
     }
 }
 

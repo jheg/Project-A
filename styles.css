@@ -1284,15 +1284,22 @@ body {
    Task Date Badge
    ====================== */
 
+.task-date-container {
+    display: inline-flex;
+    margin-left: var(--spacing-sm);
+}
+
 .task-date-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     font-size: 0.75rem;
-    padding: 2px 8px;
+    padding: 4px 8px;
     border-radius: var(--radius-full);
     font-weight: 600;
-    margin-left: var(--spacing-xs);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
 }
 
 .task-date-badge--overdue {
@@ -1300,14 +1307,29 @@ body {
     color: var(--color-danger);
 }
 
+.task-date-badge--overdue:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.05);
+}
+
 .task-date-badge--today {
     background: rgba(245, 158, 11, 0.1);
     color: #f59e0b;
 }
 
+.task-date-badge--today:hover {
+    background: rgba(245, 158, 11, 0.2);
+    transform: scale(1.05);
+}
+
 .task-date-badge--future {
     background: rgba(16, 185, 129, 0.1);
     color: var(--color-secondary);
+}
+
+.task-date-badge--future:hover {
+    background: rgba(16, 185, 129, 0.2);
+    transform: scale(1.05);
 }
 
 .task-date-btn {
@@ -1319,7 +1341,6 @@ body {
     font-size: 0.875rem;
     cursor: pointer;
     transition: all var(--transition-fast);
-    margin-left: var(--spacing-xs);
 }
 
 .task-date-btn:hover {
@@ -1331,6 +1352,48 @@ body {
 .task-date-btn:focus {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+}
+
+/* ======================
+   Quick Add Modal
+   ====================== */
+
+.quick-add-content {
+    max-width: 500px;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-xs);
+    margin-top: var(--spacing-md);
+}
+
+.form-label:first-of-type {
+    margin-top: 0;
+}
+
+.quick-add-input {
+    width: 100%;
+    padding: var(--spacing-md);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+}
+
+.quick-add-input:hover {
+    border-color: var(--color-primary);
+}
+
+.quick-add-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 /* ======================

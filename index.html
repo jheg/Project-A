@@ -215,6 +215,39 @@
                 </div>
             </div>
         </div>
+
+        <!-- Quick Add Modal (Shift+D) -->
+        <div id="quickAddModal" class="modal" style="display: none;">
+            <div class="modal-content quick-add-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Quick Add Task with Date</h3>
+                    <button id="closeQuickAdd" class="modal-close" aria-label="Close quick add">×</button>
+                </div>
+                <div class="modal-body">
+                    <label for="quickAddInput" class="form-label">Task Description</label>
+                    <input 
+                        type="text" 
+                        id="quickAddInput" 
+                        class="quick-add-input"
+                        placeholder="Enter task..."
+                        maxlength="200"
+                        required
+                        aria-label="Task description"
+                    />
+                    <label for="quickAddDate" class="form-label">Due Date</label>
+                    <input 
+                        type="date" 
+                        id="quickAddDate" 
+                        class="date-input"
+                        aria-label="Select due date"
+                    />
+                </div>
+                <div class="modal-footer">
+                    <button id="cancelQuickAdd" class="btn btn-secondary">Cancel</button>
+                    <button id="submitQuickAdd" class="btn btn-primary">Add Task</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script src="script.js"></script>

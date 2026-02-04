@@ -307,6 +307,46 @@ function createTaskElement(task) {
     label.htmlFor = `task-${task.id}`;
     label.textContent = task.text;
     
+    // Date badge or button
+    const dateContainer = document.createElement('span');
+    dateContainer.className = 'task-date-container';
+    
+    if (task.dueDate) {
+        const dateBadge = document.createElement('button');
+        dateBadge.className = 'task-date-badge';
+        
+        // Determine badge class based on due date
+        if (task.completed) {
+            // Completed tasks don't show overdue/today styling
+        } else if (task.isOverdue && task.isOverdue()) {
+            dateBadge.classList.add('task-date-badge--overdue');
+        } else if (task.isDueToday && task.isDueToday()) {
+            dateBadge.classList.add('task-date-badge--today');
+        } else {
+            dateBadge.classList.add('task-date-badge--future');
+        }
+        
+        dateBadge.textContent = formatDate(task.dueDate);
+        dateBadge.title = 'Click to edit due date';
+        dateBadge.setAttribute('aria-label', `Due date: ${formatDate(task.dueDate)}. Click to edit`);
+        dateBadge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openDatePickerForTask(task.id);
+        });
+        dateContainer.appendChild(dateBadge);
+    } else {
+        const addDateBtn = document.createElement('button');
+        addDateBtn.className = 'task-date-btn';
+        addDateBtn.innerHTML = '📅 Add Date';
+        addDateBtn.title = 'Add due date';
+        addDateBtn.setAttribute('aria-label', 'Add due date to task');
+        addDateBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openDatePickerForTask(task.id);
+        });
+        dateContainer.appendChild(addDateBtn);
+    }
+    
     // Delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'task-item__delete';
@@ -321,6 +361,7 @@ function createTaskElement(task) {
     // Assemble the task item
     li.appendChild(checkbox);
     li.appendChild(label);
+    li.appendChild(dateContainer);
     li.appendChild(deleteBtn);
     
     return li;
@@ -504,11 +545,32 @@ function loadTasks() {
             const parsedTasks = JSON.parse(savedTasks);
             // Recreate Task instances from plain objects
             tasks = parsedTasks.map(taskData => {
-                const task = new Task(taskData.text, taskData.id);
+                const task = new Task(taskData.text, taskData.id, taskData.dueDate);
                 task.completed = taskData.completed;
                 task.createdAt = taskData.createdAt;
+                task.dateCompleted = taskData.dateCompleted;
                 return task;
             });
+        } else {
+            // Initialize with sample tasks for demo purposes
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const nextWeek = new Date(today);
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            tasks = [
+                new Task('Review project proposals', null, yesterday.toISOString().split('T')[0]),
+                new Task('Submit quarterly report', null, today.toISOString().split('T')[0]),
+                new Task('Code review for feature X', null, tomorrow.toISOString().split('T')[0]),
+                new Task('Update documentation', null, nextWeek.toISOString().split('T')[0]),
+                new Task('Team meeting preparation'),
+                new Task('Brainstorm new ideas')
+            ];
+            tasks[4].toggle(); // Mark one as completed
+            saveTasks();
         }
         
         // Clean up old taskIdCounter from localStorage (legacy)
@@ -692,20 +754,6 @@ let currentMonth = new Date();
 let currentDateFilter = 'all';
 let selectedTaskForDate = null;
 
-// Mock static data for MVP
-const staticTasks = [
-    { id: '1', text: 'Review project proposals', completed: false, dueDate: '2026-02-04', createdAt: '2026-02-01T10:00:00Z' },
-    { id: '2', text: 'Submit quarterly report', completed: false, dueDate: '2026-02-05', createdAt: '2026-02-01T11:00:00Z' },
-    { id: '3', text: 'Team meeting preparation', completed: true, dueDate: '2026-02-03', createdAt: '2026-02-01T12:00:00Z' },
-    { id: '4', text: 'Update documentation', completed: false, dueDate: '2026-02-10', createdAt: '2026-02-01T13:00:00Z' },
-    { id: '5', text: 'Code review for feature X', completed: false, dueDate: '2026-02-08', createdAt: '2026-02-01T14:00:00Z' },
-    { id: '6', text: 'Fix critical bug', completed: false, dueDate: '2026-02-02', createdAt: '2026-02-01T15:00:00Z' },
-    { id: '7', text: 'Prepare presentation', completed: false, dueDate: '2026-02-15', createdAt: '2026-02-01T16:00:00Z' },
-    { id: '8', text: 'Client follow-up call', completed: false, dueDate: '2026-02-06', createdAt: '2026-02-01T17:00:00Z' },
-    { id: '9', text: 'Update dependencies', completed: true, dueDate: '2026-02-01', createdAt: '2026-01-30T10:00:00Z' },
-    { id: '10', text: 'Design mockups review', completed: false, dueDate: '2026-02-12', createdAt: '2026-02-01T18:00:00Z' }
-];
-
 /**
  * Initialize dates feature
  */
@@ -806,10 +854,41 @@ function attachDatesEventListeners() {
         }
     });
     
-    // Escape key to close modal
+    // Quick Add modal
+    document.getElementById('closeQuickAdd').addEventListener('click', closeQuickAddModal);
+    document.getElementById('cancelQuickAdd').addEventListener('click', closeQuickAddModal);
+    document.getElementById('submitQuickAdd').addEventListener('click', submitQuickAdd);
+    
+    // Close quick add on background click
+    document.getElementById('quickAddModal').addEventListener('click', (e) => {
+        if (e.target.id === 'quickAddModal') {
+            closeQuickAddModal();
+        }
+    });
+    
+    // Quick add Enter key
+    document.getElementById('quickAddInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            submitQuickAdd();
+        }
+    });
+    
+    // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && document.getElementById('datePickerModal').style.display === 'flex') {
-            closeDatePickerModal();
+        // Escape key to close modals
+        if (e.key === 'Escape') {
+            if (document.getElementById('datePickerModal').style.display === 'flex') {
+                closeDatePickerModal();
+            }
+            if (document.getElementById('quickAddModal').style.display === 'flex') {
+                closeQuickAddModal();
+            }
+        }
+        
+        // Shift+D for quick add
+        if (e.shiftKey && e.key === 'D' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            openQuickAddModal();
         }
     });
 }
@@ -1072,7 +1151,7 @@ function createListSection(title, tasks, isOverdue = false) {
         checkbox.type = 'checkbox';
         checkbox.className = 'list-task-checkbox';
         checkbox.checked = task.completed;
-        checkbox.addEventListener('change', () => toggleStaticTask(task.id));
+        checkbox.addEventListener('change', () => toggleTaskFromDatesView(task.id));
         
         const content = document.createElement('div');
         content.className = 'list-task-content';
@@ -1101,14 +1180,14 @@ function createListSection(title, tasks, isOverdue = false) {
  * Get tasks for a specific date
  */
 function getTasksForDate(dateStr) {
-    return staticTasks.filter(task => task.dueDate === dateStr);
+    return tasks.filter(task => !task.deleted && task.dueDate === dateStr);
 }
 
 /**
  * Get all tasks with dates (filtered)
  */
 function getFilteredDateTasks() {
-    let filtered = staticTasks.filter(task => task.dueDate);
+    let filtered = tasks.filter(task => !task.deleted && task.dueDate);
     
     const today = new Date().toISOString().split('T')[0];
     
@@ -1167,7 +1246,7 @@ function handleDateFilter(e) {
  * Update overdue badge
  */
 function updateOverdueBadge() {
-    const overdueCount = staticTasks.filter(task => isTaskOverdue(task)).length;
+    const overdueCount = tasks.filter(task => !task.deleted && isTaskOverdue(task)).length;
     const badge = document.getElementById('overdueBadge');
     const countEl = badge.querySelector('.overdue-badge__count');
     
@@ -1218,32 +1297,32 @@ function formatDate(dateStr) {
 }
 
 /**
- * Toggle static task (MVP - just updates display)
+ * Toggle task from dates view and sync with main view
  */
-function toggleStaticTask(taskId) {
-    const task = staticTasks.find(t => t.id === taskId);
+function toggleTaskFromDatesView(taskId) {
+    const task = tasks.find(t => t.id === taskId && !t.deleted);
     if (task) {
-        task.completed = !task.completed;
+        task.toggle();
         renderDatesView();
         updateOverdueBadge();
+        saveTasks();
         announceToScreenReader(`Task marked as ${task.completed ? 'completed' : 'incomplete'}`);
     }
 }
 
 /**
- * Open date picker modal
+ * Open date picker modal for a task
  */
-function openDatePickerModal(taskId) {
+function openDatePickerForTask(taskId) {
     selectedTaskForDate = taskId;
     const modal = document.getElementById('datePickerModal');
     const input = document.getElementById('dueDateInput');
     
-    // Set min date to today
+    // Don't set min date - allow past dates to be set
     const today = new Date().toISOString().split('T')[0];
-    input.min = today;
     
     // If task has a date, pre-fill it
-    const task = staticTasks.find(t => t.id === taskId);
+    const task = tasks.find(t => t.id === taskId && !t.deleted);
     if (task && task.dueDate) {
         input.value = task.dueDate;
     } else {
@@ -1273,14 +1352,18 @@ function setTaskDate() {
         return;
     }
     
-    const task = staticTasks.find(t => t.id === selectedTaskForDate);
+    const task = tasks.find(t => t.id === selectedTaskForDate && !t.deleted);
     if (task) {
-        task.dueDate = date;
+        task.setDueDate(date);
         closeDatePickerModal();
+        saveTasks();
         
+        // Update both views
         if (currentView === 'dates') {
             renderDatesView();
             updateOverdueBadge();
+        } else {
+            renderTasks();
         }
         
         announceToScreenReader(`Due date set to ${formatDate(date)}`);
@@ -1295,18 +1378,92 @@ function clearTaskDate() {
         return;
     }
     
-    const task = staticTasks.find(t => t.id === selectedTaskForDate);
+    const task = tasks.find(t => t.id === selectedTaskForDate && !t.deleted);
     if (task) {
         task.dueDate = null;
         closeDatePickerModal();
+        saveTasks();
         
+        // Update both views
         if (currentView === 'dates') {
             renderDatesView();
             updateOverdueBadge();
+        } else {
+            renderTasks();
         }
         
         announceToScreenReader('Due date cleared');
     }
+}
+
+/**
+ * Open Quick Add modal (Shift+D)
+ */
+function openQuickAddModal() {
+    const modal = document.getElementById('quickAddModal');
+    const input = document.getElementById('quickAddInput');
+    const dateInput = document.getElementById('quickAddDate');
+    
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+    
+    // Clear previous input
+    input.value = '';
+    
+    modal.style.display = 'flex';
+    input.focus();
+    
+    announceToScreenReader('Quick add modal opened');
+}
+
+/**
+ * Close Quick Add modal
+ */
+function closeQuickAddModal() {
+    document.getElementById('quickAddModal').style.display = 'none';
+}
+
+/**
+ * Submit Quick Add task
+ */
+function submitQuickAdd() {
+    const input = document.getElementById('quickAddInput');
+    const dateInput = document.getElementById('quickAddDate');
+    
+    const text = input.value.trim();
+    const dueDate = dateInput.value;
+    
+    if (!text) {
+        input.focus();
+        return;
+    }
+    
+    // Sanitize input
+    const sanitizedText = sanitizeInput(text);
+    
+    // Create task with date
+    const task = new Task(sanitizedText, null, dueDate || null);
+    tasks.push(task);
+    
+    // Close modal
+    closeQuickAddModal();
+    
+    // Update UI based on current view
+    if (currentView === 'main') {
+        addTaskToDOM(task);
+        updateStats();
+    } else {
+        renderDatesView();
+        updateOverdueBadge();
+    }
+    
+    // Save to storage
+    saveTasks();
+    
+    // Announce
+    const dateText = dueDate ? ` with due date ${formatDate(dueDate)}` : '';
+    announceToScreenReader(`Task "${sanitizedText}" added${dateText}`);
 }
 
 // ======================
